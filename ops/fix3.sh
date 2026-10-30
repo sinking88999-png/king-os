@@ -14,7 +14,7 @@ TOKEN=$(curl -s -H 'Metadata-Flavor: Google' 'http://metadata.google.internal/co
 probe(){ curl -s -m 40 -o /tmp/vertex-probe.json -w '%{http_code}' -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
   "https://aiplatform.googleapis.com/v1/projects/$PROJECT/locations/global/publishers/google/models/$1:generateContent" \
   -d '{"contents":[{"role":"user","parts":[{"text":"用中文回答：1+1=?只回答数字"}]}]}'; }
-MODEL=gemini-2.5-flash
+MODEL=gemini-3.8-flash
 code=$(probe $MODEL)
 say "Vertex 探测 $MODEL -> HTTP $code: $(python3 -c 'import json;d=json.load(open("/tmp/vertex-probe.json"));print(d["candidates"][0]["content"]["parts"][0]["text"].strip() if "candidates" in d else d.get("error",{}).get("message","")[:160])' 2>/dev/null)"
 if [ "$code" != "200" ]; then say "Vertex 不可用，停止（不改代码）"; exit 1; fi
