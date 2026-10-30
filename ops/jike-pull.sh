@@ -7,13 +7,16 @@ SSHO="-i $K -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 -o BatchMod
 STAMP=$(date +%Y%m%d-%H%M%S)
 STG=/srv/migrate/jike-$STAMP
 say(){ echo "[pull] $*"; }
-ssh $SSHO root@$OLD 'echo connected $(hostname)' 2>&1 | sed 's/^/[pull] /' || { say "连不上旧服务器"; exit 1; }
+ssh -n $SSHO root@$OLD 'echo connected $(hostname)' 2>&1 | sed 's/^/[pull] /' || { say "连不上旧服务器"; exit 1; }
 mkdir -p "$STG"
-# 旧库在线安全拷贝（sqlite backup），再拉上传目录
-ssh $SSHO root@$OLD "python3 -c \"import sqlite3;s=sqlite3.connect('/var/lib/jike/jike.sqlite');d=sqlite3.connect('/tmp/jike-migrate.sqlite');s.backup(d);d.close()\" && ls -la /tmp/jike-migrate.sqlite" | sed 's/^/[pull] old /'
-scp -q $SSHO root@$OLD:/tmp/jike-migrate.sqlite "$STG/old-jike.sqlite"
-rsync -a -e "ssh $SSHO" root@$OLD:/var/lib/jike/uploads/ "$STG/old-uploads/" 2>&1 | tail -2
-ssh $SSHO root@$OLD 'rm -f /tmp/jike-migrate.sqlite'
+# 旧站已无流量（域名 10/29 已切走），直接拷库文件（含 wal/shm 如有）和上传目录
+for f in jike.sqlite jike.sqlite-wal jike.sqlite-shm; do
+  scp -q $SSHO root@$OLD:/var/lib/jike/$f "$STG/old-$f" 2>/dev/null && say "拷贝 $f"
+done
+mv "$STG/old-jike.sqlite" "$STG/old-jike.sqlite" 2>/dev/null
+[ -f "$STG/old-jike.sqlite-wal" ] && mv "$STG/old-jike.sqlite-wal" "$STG/old-jike.sqlite-wal"
+mkdir -p "$STG/old-uploads"
+ssh -n $SSHO root@$OLD 'tar -C /var/lib/jike/uploads -czf - .' | tar -C "$STG/old-uploads" -xzf -
 say "暂存: $(du -sh $STG | cut -f1)  上传文件数: $(find $STG/old-uploads -type f | wc -l)"
 # 找新服务器上即刻正在用的库
 NEWDB=$(ls -t /var/lib/jike/jike.sqlite /srv/jike/*.sqlite /srv/jike/data/*.sqlite /srv/jike/*/jike.sqlite 2>/dev/null | head -1)
