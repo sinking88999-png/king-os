@@ -10,7 +10,7 @@ gcloud compute firewall-rules describe allow-ssh-iap --project $P >/dev/null 2>&
 r=$(gcloud compute ssh instance-sg --zone asia-southeast1-b --tunnel-through-iap --quiet --command 'echo IAP-OK' 2>&1 | tail -1)
 say "IAP 登录测试: $r"
 if [ "$r" = "IAP-OK" ]; then
-  gcloud compute firewall-rules update default-allow-ssh --project $P --source-ranges=35.235.240.0/20 --quiet >/dev/null && say "default-allow-ssh 已收紧到 IAP 网段"
+  gcloud compute firewall-rules update default-allow-ssh --project $P --source-ranges=35.235.240.0/20,52.76.121.120/32 --quiet >/dev/null && say "default-allow-ssh 已收紧到 IAP 网段 + GMSSH"
   r2=$(gcloud compute ssh instance-sg --zone asia-southeast1-b --tunnel-through-iap --quiet --command 'echo STILL-OK' 2>&1 | tail -1)
   say "收紧后复测: $r2"
   if [ "$r2" != "STILL-OK" ]; then gcloud compute firewall-rules update default-allow-ssh --project $P --source-ranges=0.0.0.0/0 --quiet; say "复测失败，已回滚"; fi
