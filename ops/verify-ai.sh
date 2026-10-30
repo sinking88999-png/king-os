@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 真实调用一次 kg-lite 里的 AI（走和回复助手完全相同的代码路径）
-docker exec deploy-kg-lite-1 python - <<'PY'
+docker exec -i deploy-kg-lite-1 python - <<'PY'
 import inspect
 from app import ai
 from app.config import settings
